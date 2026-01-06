@@ -1,0 +1,16 @@
+---
+repo: "bigrepo"
+params:
+  url: "https://public.dhe.ibm.com/software/ibmi/products/pase/rpms/repo/"
+  concurrency: 5
+---
+repo: "7.4"
+params:
+  url: "https://public.dhe.ibm.com/software/ibmi/products/pase/rpms/repo-7.4/"
+  concurrency: 5
+#---
+#repo: "7.6"
+#params:
+#  url: "https://public.dhe.ibm.com/software/ibmi/products/pase/rpms/repo-7.6/"
+#  concurrency: 5
+
