@@ -117,7 +117,7 @@ public class RpmRepoToolGuiUser extends JFrame {
     private void refreshZipDropdown() {
         cmbExistingZips.removeAllItems();
         File snapshotsDir = new File("snapshots");
-        File[] zips = snapshotsDir.listFiles((dir, name) -> name.matches("\\d{8}_\\d{6}_repo\\.zip"));
+        File[] zips = snapshotsDir.listFiles((dir, name) -> name.matches("snapshot_\\d{8}_\\d{6}\\.zip"));
         if (zips != null) {
             java.util.Arrays.sort(zips, java.util.Comparator.comparing(File::getName).reversed());
             for (File zip : zips) {
@@ -165,7 +165,7 @@ public class RpmRepoToolGuiUser extends JFrame {
                                     "Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
                             } else {
                                 try {
-                                    int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, Path.of(targetFinal));
+                                    int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
                                     SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
                                         "Installed " + installed + " .repo files to: " + targetFinal,
                                         "Install", JOptionPane.INFORMATION_MESSAGE));
@@ -177,7 +177,7 @@ public class RpmRepoToolGuiUser extends JFrame {
                             }
                         } else {
                             try {
-                                int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, Path.of(targetFinal));
+                                int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
                                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
                                     "Installed " + installed + " .repo files to: " + targetFinal,
                                     "Install", JOptionPane.INFORMATION_MESSAGE));

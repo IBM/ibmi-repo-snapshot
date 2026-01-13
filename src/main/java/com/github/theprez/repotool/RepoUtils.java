@@ -62,15 +62,30 @@ public class RepoUtils {
                         Path repodata = d.resolve("repodata");
                         if (Files.isDirectory(repodata)) {
                             String name = d.getFileName().toString();
-                            String baseurl = String.format("http://%s:%d/repo/%s/", baseHost, port, name);
-                            String repoContent = "[" + name + "]\n"
+                            // Try to get timestamp from parent directory if it matches snapshot_YYYYMMDD_HHMMSS
+                            String timestamp = null;
+                            Path parent = d.getParent();
+                            if (parent != null) {
+                                String parentName = parent.getFileName().toString();
+                                if (parentName.matches("snapshot_\\d{8}_\\d{6}")) {
+                                    timestamp = parentName.substring("snapshot_".length());
+                                }
+                            }
+                            if (timestamp == null) {
+                                // fallback: use current time
+                                timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                            }
+                                String repoFileName = "snapshot_" + timestamp + "_" + name + ".repo";
+                                String repoId = repoFileName.replaceFirst("\\.repo$", "");
+                                String baseurl = String.format("http://%s:%d/repo/%s/", baseHost, port, name);
+                                String repoContent = "[" + repoId + "]\n"
                                     + "name=Repo " + name + "\n"
                                     + "baseurl=" + baseurl + "\n"
                                     + "enabled=1\n"
                                     + "gpgcheck=0\n";
-                            Path out = root.resolve(name + ".repo");
-                            Files.writeString(out, repoContent, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-                            System.out.println("Wrote repo file: " + out + " -> " + baseurl);
+                                Path out = root.resolve(repoFileName);
+                                Files.write(out, repoContent.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                                System.out.println("Wrote repo file: " + out + " -> " + baseurl);
                         }
                     } catch (Exception e) {
                         System.err.println("Failed to write .repo for " + d + ": " + e.getMessage());

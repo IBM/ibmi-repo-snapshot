@@ -12,7 +12,7 @@ public class JettyServerTest {
         Path tempDir = Files.createTempDirectory("jettyservertest3");
         Path secretFile = Files.createTempFile("secret", ".txt");
         Files.write(secretFile, "Sensitive Data".getBytes());
-        JettyServer server = new JettyServer(9000, tempDir);
+        JettyServer server = new JettyServer(9001, tempDir);
         try {
             server.start();
             Thread.sleep(500); // Pause to allow Jetty server to start
@@ -34,7 +34,7 @@ public class JettyServerTest {
     public void testJettyServerConstructor() throws Exception {
         Path tempDir = Files.createTempDirectory("jettyservertest");
         try {
-            JettyServer server = new JettyServer(9000, tempDir);
+            JettyServer server = new JettyServer(9001, tempDir);
             assertNotNull(server);
         } finally {
             Files.deleteIfExists(tempDir);
@@ -44,7 +44,7 @@ public class JettyServerTest {
     @Test
     public void testJettyServerStartStop() throws Exception {
         Path tempDir = Files.createTempDirectory("jettyservertest2");
-        JettyServer server = new JettyServer(9000, tempDir);
+        JettyServer server = new JettyServer(9001, tempDir);
         boolean started = false;
         try {
             try {

@@ -44,7 +44,7 @@ public class JettyServer {
             try {
                 // base is the root directory, alias is the requested file path
                 Path basePath = rootDir;
-                Path aliasPath = Path.of(alias.toString()).toAbsolutePath().normalize();
+                Path aliasPath = java.nio.file.Paths.get(alias.toString()).toAbsolutePath().normalize();
                 if (!aliasPath.startsWith(basePath)) {
                     System.err.println("[SECURITY] Path traversal attempt blocked: " + aliasPath);
                     return false;

@@ -24,8 +24,151 @@ import com.github.theprez.repotool.RepoDownloader.StatusListener;
 
 public class RpmRepoTool {
 
+    /**
+     * Performs the bootstrap workflow if the system is not already bootstrapped.
+     * Steps:
+     * Create in-progress marker file
+     * Extract /tmp/bootstrap.tar.Z using tar
+     * Decompress and extract bootstrap-stage2.tar.zst using zstd and tar binaries
+     * Link /bin/bash to /QOpenSys/pkgs/bin/bash
+     * Remove in-progress marker file
+     * Print success or failure messages
+     */
+    private static void performBootstrap() {
+        File inProgress = new File("/tmp/bootstrap.in-progress-dont-remove");
+        // Java 8 compatible unique temp dir: use PID from getName() or fallback to timestamp
+        String pid = null;
+        try {
+            String name = java.lang.management.ManagementFactory.getRuntimeMXBean().getName(); // format: pid@host
+            int atIdx = name.indexOf('@');
+            if (atIdx > 0) {
+                pid = name.substring(0, atIdx);
+            }
+        } catch (Throwable t) {
+            // ignore, fallback below
+        }
+        if (pid == null) {
+            pid = String.valueOf(System.currentTimeMillis());
+        }
+        String tempDirPath = "/tmp/bootstrap." + pid;
+        File tempDir = new File(tempDirPath);
+        try {
+            // Create unique temp directory
+            if (!tempDir.exists() && !tempDir.mkdirs()) {
+                throw new Exception("Failed to create temp directory: " + tempDirPath);
+            }
+            // Create in-progress marker file
+            try (java.io.FileWriter fw = new java.io.FileWriter(inProgress)) {
+                fw.write(java.time.LocalDateTime.now().toString());
+            }
+            System.out.println("Starting bootstrap at " + java.time.LocalDateTime.now());
+            System.out.println("Please do not interrupt");
+
+            // Extract bootstrap.tar.Z from current working directory to tempDir using tar
+            String cwd = System.getProperty("user.dir");
+            File tarZ = new File(cwd, "bootstrap.tar.Z");
+            if (!tarZ.exists()) {
+                throw new Exception("Missing bootstrap.tar.Z in current directory (" + cwd + ") for bootstrapping");
+            }
+            Process tarExtract = new ProcessBuilder("/QOpenSys/usr/bin/tar", "-xof", tarZ.getAbsolutePath())
+                .directory(tempDir)
+                .inheritIO()
+                .start();
+            int tarResult = tarExtract.waitFor();
+            if (tarResult != 0) throw new Exception("Failed to extract bootstrap.tar.Z");
+
+            // Decompress and extract bootstrap-stage2.tar.zst using zstd and tar binaries in tempDir
+            File zstdBin = new File(tempDir, "zstd.bin");
+            File tarBin = new File(tempDir, "tar.bin");
+            File stage2 = new File(tempDir, "bootstrap-stage2.tar.zst");
+
+
+            // Check required files exist
+            if (!zstdBin.exists() || !tarBin.exists() || !stage2.exists()) {
+                throw new Exception("Missing stage2 bootstrap files in " + tempDirPath);
+            }
+
+            // Use a shell pipeline to let the shell handle piping between zstd and tar
+            String shellCmd = zstdBin.getAbsolutePath() + " -dc " + stage2.getAbsolutePath() + " | " +
+                tarBin.getAbsolutePath() + " -x -f - --same-permissions --same-owner --checkpoint=5120 --checkpoint-action=totals";
+            ProcessBuilder shellPb = new ProcessBuilder("sh", "-c", shellCmd);
+            shellPb.directory(new File("/"));
+            shellPb.inheritIO();
+            Process shellProc = shellPb.start();
+            int shellExit = shellProc.waitFor();
+            if (shellExit != 0) throw new Exception("Failed to extract stage2 bootstrap (shell pipeline exit=" + shellExit + ")");
+
+            // Link /bin/bash to /QOpenSys/pkgs/bin/bash
+            Process ln = new ProcessBuilder("ln", "-sf", "/QOpenSys/pkgs/bin/bash", "/bin/bash")
+                .inheritIO()
+                .start();
+            int lnResult = ln.waitFor();
+            if (lnResult != 0) throw new Exception("Failed to link /bin/bash");
+
+            // Remove in-progress marker file
+            inProgress.delete();
+
+            // Cleanup temp directory
+            for (File f : tempDir.listFiles()) {
+                f.delete();
+            }
+            tempDir.delete();
+
+            // Print success message
+            System.out.println("Bootstrap succeeded at " + java.time.LocalDateTime.now());
+        } catch (Exception e) {
+            System.err.println("Bootstrap failed at " + java.time.LocalDateTime.now());
+            e.printStackTrace();
+            // Remove in-progress marker on failure as well
+            inProgress.delete();
+            // Cleanup temp directory on failure
+            if (tempDir.exists()) {
+                for (File f : tempDir.listFiles()) {
+                    f.delete();
+                }
+                tempDir.delete();
+            }
+            System.exit(1);
+        }
+    }
+
+    /**
+     * Checks if the system is already bootstrapped by verifying the existence of key files.
+     * @return true if bootstrapped, false otherwise
+     */
+    private static boolean ensureBootstrapped() {
+        File rpmLib = new File("/QOpenSys/var/lib/rpm");
+        File inProgress = new File("/tmp/bootstrap.in-progress-dont-remove");
+        if (inProgress.exists()) {
+            System.out.println("Bootstrap in progress or previously failed. Needs attention.");
+            return false;
+        }
+        if (rpmLib.exists()) {
+            System.out.println("System is already bootstrapped.");
+            return true;
+        }
+        System.out.println("System is not bootstrapped.");
+        return false;
+    }
+
     public static void main(String[] args) {
         try {
+            // Only run bootstrap logic on IBM i
+            String osName = System.getProperty("os.name");
+            boolean isIBMi = osName != null && (osName.equalsIgnoreCase("OS/400") || osName.toLowerCase().contains("ibm i"));
+            if (isIBMi) {
+                try {
+                    if (!ensureBootstrapped()) {
+                        performBootstrap();
+                    }
+                } catch (Exception e) {
+                    System.err.println("Bootstrap check or process failed: " + e.getMessage());
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+            } else {
+                System.out.println("Non-IBM i OS detected (" + osName + "). Skipping bootstrap checks.");
+            }
             Path extractedDir = null;
 
             Options opts = new Options();
@@ -126,7 +269,7 @@ public class RpmRepoTool {
 
                 // Save all repos to one zip file with timestamped name
                 String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-                String zipName = timestamp + "_repo.zip";
+                String zipName = "snapshot_" + timestamp + ".zip";
                 File combinedZip = new File("snapshots/" + zipName);
                 System.out.println("Zipping...");
                 RepoDownloader.saveMultipleToZip(downloaders, repoIds, combinedZip);
@@ -152,7 +295,7 @@ public class RpmRepoTool {
                     if (!RepoUtils.isRunningAsRoot() && !force) {
                         System.err.println("Warning: not running as root. Installing into " + target + " will likely fail. Rerun with --force-install to proceed anyway.");
                     } else {
-                        int installed = RepoUtils.installRepoFiles(extractedDir, Path.of(target));
+                        int installed = RepoUtils.installRepoFiles(extractedDir, java.nio.file.Paths.get(target));
                         System.out.println("Installed " + installed + " .repo files to: " + target);
                     }
                 }
@@ -168,10 +311,10 @@ public class RpmRepoTool {
                 }
                 // extractedDir already declared
                 if (dirArg.endsWith(".zip")) {
-                    Path zipPath = Path.of(dirArg).toAbsolutePath().normalize();
-                    Path parentDir = zipPath.getParent();
+                    java.nio.file.Path zipPath = java.nio.file.Paths.get(dirArg).toAbsolutePath().normalize();
+                    java.nio.file.Path parentDir = zipPath.getParent();
                     if (parentDir == null) {
-                        parentDir = Path.of(System.getProperty("user.dir"));
+                        parentDir = java.nio.file.Paths.get(System.getProperty("user.dir"));
                     }
                     String zipBaseName = zipPath.getFileName().toString().replaceFirst("\\.zip$", "");
                     extractedDir = parentDir.resolve(zipBaseName);
@@ -192,7 +335,7 @@ public class RpmRepoTool {
                         System.out.println("Extracted directory already exists, skipping unzip: " + extractedDir);
                     }
                 } else {
-                    extractedDir = Path.of(dirArg).toAbsolutePath().normalize();
+                    extractedDir = java.nio.file.Paths.get(dirArg).toAbsolutePath().normalize();
                 }
                 System.out.println("Using extracted directory: " + extractedDir);
                 // Ensure repodata exists (attempt to create if missing)
@@ -208,7 +351,7 @@ public class RpmRepoTool {
                     if (!RepoUtils.isRunningAsRoot() && !force) {
                         System.err.println("Warning: not running as root. Installing into " + target + " will likely fail. Rerun with --force-install to proceed anyway.");
                     } else {
-                        int installed = RepoUtils.installRepoFiles(extractedDir, Path.of(target));
+                        int installed = RepoUtils.installRepoFiles(extractedDir, java.nio.file.Paths.get(target));
                         System.out.println("Installed " + installed + " .repo files to: " + target);
                     }
                 }

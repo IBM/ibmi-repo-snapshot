@@ -109,21 +109,19 @@ public class RepoPickerPanel extends JPanel {
                 conn.setRequestProperty("User-Agent", "RepoSnapshotTool/1.0");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(20000);
+                List<String> validRepos = new ArrayList<>();
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                     StringBuilder sb = new StringBuilder();
                     String line;
                     while ((line = br.readLine()) != null) sb.append(line).append('\n');
-                    // Parse href="..." for both files and folders
                     Pattern p = Pattern.compile("href\\s*=\\s*\"([^\"]+)\"");
                     Matcher m = p.matcher(sb.toString());
                     Set<String> names = new HashSet<>();
                     while (m.find()) {
                         String href = m.group(1);
                         if (href == null) continue;
-                        // Skip parent directory links and query/sort links
                         if (href.equals("../")) continue;
                         if (href.startsWith("?")) continue;
-                        // Only top-level (not containing another /)
                         String name = href.endsWith("/") ? href.substring(0, href.length()-1) : href;
                         if (!name.contains("/")) {
                             names.add(name);
@@ -131,7 +129,23 @@ public class RepoPickerPanel extends JPanel {
                     }
                     List<String> out = new ArrayList<>(names);
                     Collections.sort(out, String.CASE_INSENSITIVE_ORDER);
-                    return out;
+                    // For each candidate, check if repodata exists
+                    for (String repo : out) {
+                        String repodataUrl = BASE + repo + "/repodata/";
+                        try {
+                            HttpURLConnection repodataConn = (HttpURLConnection) new URL(repodataUrl).openConnection();
+                            repodataConn.setRequestMethod("HEAD");
+                            repodataConn.setConnectTimeout(5000);
+                            repodataConn.setReadTimeout(5000);
+                            int code = repodataConn.getResponseCode();
+                            if (code == 200) {
+                                validRepos.add(repo);
+                            }
+                        } catch (Exception ignore) {
+                            // skip if not found or error
+                        }
+                    }
+                    return validRepos;
                 }
             }
 

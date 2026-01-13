@@ -173,7 +173,7 @@ public class RpmRepoToolGui extends JFrame {
 	private void refreshZipDropdown() {
 		cmbExistingZips.removeAllItems();
 		File snapshotsDir = new File("snapshots");
-		File[] zips = snapshotsDir.listFiles((dir, name) -> name.matches("\\d{8}_\\d{6}_repo\\.zip"));
+		File[] zips = snapshotsDir.listFiles((dir, name) -> name.matches("snapshot_\\d{8}_\\d{6}\\.zip"));
 		if (zips != null) {
 			Arrays.sort(zips, Comparator.comparing(File::getName).reversed());
 			for (File zip : zips) {
@@ -262,7 +262,7 @@ public class RpmRepoToolGui extends JFrame {
 			@Override protected Void doInBackground() {
 				try {
 					File snapshotsDir = new File("snapshots");
-					File[] zips = snapshotsDir.listFiles((dir, name) -> name.matches("\\d{8}_\\d{6}_repo\\.zip"));
+					File[] zips = snapshotsDir.listFiles((dir, name) -> name.matches("snapshot_\\d{8}_\\d{6}\\.zip"));
 					if (zips == null || zips.length == 0) {
 						SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 							"No repo zip found in snapshots/", "No zip found", JOptionPane.WARNING_MESSAGE));
@@ -295,7 +295,7 @@ public class RpmRepoToolGui extends JFrame {
 									"Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
 							} else {
 								try {
-									int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDirForRepo, Path.of(targetFinal));
+									int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDirForRepo, java.nio.file.Paths.get(targetFinal));
 									SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 										"Installed " + installed + " .repo files to: " + targetFinal,
 										"Install", JOptionPane.INFORMATION_MESSAGE));
@@ -307,7 +307,7 @@ public class RpmRepoToolGui extends JFrame {
 							}
 						} else {
 							try {
-								int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDirForRepo, Path.of(targetFinal));
+								int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDirForRepo, java.nio.file.Paths.get(targetFinal));
 								SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 									"Installed " + installed + " .repo files to: " + targetFinal,
 									"Install", JOptionPane.INFORMATION_MESSAGE));
@@ -393,7 +393,7 @@ public class RpmRepoToolGui extends JFrame {
 									"Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
 							} else {
 								try {
-									int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, Path.of(targetFinal));
+									int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
 									SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 										"Installed " + installed + " .repo files to: " + targetFinal,
 										"Install", JOptionPane.INFORMATION_MESSAGE));
@@ -405,7 +405,7 @@ public class RpmRepoToolGui extends JFrame {
 							}
 						} else {
 							try {
-								int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, Path.of(targetFinal));
+								int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
 								SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 									"Installed " + installed + " .repo files to: " + targetFinal,
 									"Install", JOptionPane.INFORMATION_MESSAGE));
@@ -517,7 +517,7 @@ public class RpmRepoToolGui extends JFrame {
 				}
 				// Now download all files in parallel (using saveMultipleToZip)
 				String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-				String zipName = timestamp + "_repo.zip";
+				String zipName = "snapshot_" + timestamp + ".zip";
 				java.io.File snapshotsDir = new java.io.File("snapshots");
 				if (!snapshotsDir.exists()) snapshotsDir.mkdirs();
 				java.io.File combinedZip = new java.io.File(snapshotsDir, zipName);
@@ -544,7 +544,7 @@ public class RpmRepoToolGui extends JFrame {
 									"Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
 							} else {
 								try {
-									int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, Path.of(targetFinal));
+									int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
 									SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 										"Installed " + installed + " .repo files to: " + targetFinal,
 										"Install", JOptionPane.INFORMATION_MESSAGE));
@@ -556,7 +556,7 @@ public class RpmRepoToolGui extends JFrame {
 							}
 						} else {
 							try {
-								int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, Path.of(targetFinal));
+								int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
 								SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGui.this,
 									"Installed " + installed + " .repo files to: " + targetFinal,
 									"Install", JOptionPane.INFORMATION_MESSAGE));

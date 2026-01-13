@@ -29,7 +29,7 @@ public class RepoUtilsTest {
     public void testGenerateRepoFilesNoException() throws Exception {
         Path tempDir = Files.createTempDirectory("repotest2");
         try {
-            RepoUtils.generateRepoFiles(tempDir, "localhost", 9000);
+            RepoUtils.generateRepoFiles(tempDir, "localhost", 9001);
             // No exception = pass
         } finally {
             Files.deleteIfExists(tempDir);
