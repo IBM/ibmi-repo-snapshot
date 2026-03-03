@@ -184,6 +184,16 @@ public class RepoUtils {
     }
 
     /**
+     * Detect whether the current JVM is running on an IBM i (AS/400) environment.
+     * Checks common indicators such as `os.name` containing "os/400" or the presence
+     * of the `PASE` environment variable.
+     */
+    public static boolean isIbmI() {
+        String osName = System.getProperty("os.name", "").toLowerCase();
+        return osName.contains("os/400") || osName.contains("os400") || System.getenv("PASE") != null;
+    }
+
+    /**
      * Best-effort check whether the process is running with root privileges.
      * On IBM i: Checks if the user has *ALLOBJ special authority.
      * On other Unix-like systems: Runs `id -u` and returns true if UID == 0.

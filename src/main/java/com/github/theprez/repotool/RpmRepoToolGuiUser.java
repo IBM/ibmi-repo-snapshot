@@ -154,15 +154,32 @@ public class RpmRepoToolGuiUser extends JFrame {
                     com.github.theprez.repotool.RepoUtils.generateRepoFiles(extractDir, hostForRepo, portForRepo);
 
                     if (chkInstallRepos.isSelected()) {
-                        String targetFinal = "/QOpenSys/etc/yum/repos.d";
-                        boolean systemTarget = "/QOpenSys/etc/yum/repos.d".equals(targetFinal) || targetFinal.startsWith("/etc/") || targetFinal.startsWith("/QOpenSys/etc/");
-                        if (systemTarget && !com.github.theprez.repotool.RepoUtils.isRunningAsRoot()) {
-                            int r = JOptionPane.showConfirmDialog(RpmRepoToolGuiUser.this,
-                                "You are not running as root. Installing to " + targetFinal + " will likely fail. Continue?",
-                                "Install without root?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                            if (r != JOptionPane.YES_OPTION) {
-                                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
-                                    "Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
+                        if (!com.github.theprez.repotool.RepoUtils.isIbmI()) {
+                            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
+                                "Installing .repo files is only supported on IBM i. Skipping installation.",
+                                "Install Skipped", JOptionPane.INFORMATION_MESSAGE));
+                        } else {
+                            String targetFinal = "/QOpenSys/etc/yum/repos.d";
+                            boolean systemTarget = "/QOpenSys/etc/yum/repos.d".equals(targetFinal) || targetFinal.startsWith("/etc/") || targetFinal.startsWith("/QOpenSys/etc/");
+                            if (systemTarget && !com.github.theprez.repotool.RepoUtils.isRunningAsRoot()) {
+                                int r = JOptionPane.showConfirmDialog(RpmRepoToolGuiUser.this,
+                                    "You are not running as root. Installing to " + targetFinal + " will likely fail. Continue?",
+                                    "Install without root?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                                if (r != JOptionPane.YES_OPTION) {
+                                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
+                                        "Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
+                                } else {
+                                    try {
+                                        int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
+                                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
+                                            "Installed " + installed + " .repo files to: " + targetFinal,
+                                            "Install", JOptionPane.INFORMATION_MESSAGE));
+                                    } catch (Exception ex) {
+                                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
+                                            "Failed to install .repo files: " + ex.getMessage(),
+                                            "Install Error", JOptionPane.ERROR_MESSAGE));
+                                    }
+                                }
                             } else {
                                 try {
                                     int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
@@ -174,17 +191,6 @@ public class RpmRepoToolGuiUser extends JFrame {
                                         "Failed to install .repo files: " + ex.getMessage(),
                                         "Install Error", JOptionPane.ERROR_MESSAGE));
                                 }
-                            }
-                        } else {
-                            try {
-                                int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
-                                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
-                                    "Installed " + installed + " .repo files to: " + targetFinal,
-                                    "Install", JOptionPane.INFORMATION_MESSAGE));
-                            } catch (Exception ex) {
-                                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
-                                    "Failed to install .repo files: " + ex.getMessage(),
-                                    "Install Error", JOptionPane.ERROR_MESSAGE));
                             }
                         }
                     }
