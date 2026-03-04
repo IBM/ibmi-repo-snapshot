@@ -512,6 +512,7 @@ public class RpmRepoTool {
     /**
      * Create a zip snapshot containing the given directory. The zip will contain a top-level
      * folder named after the directory's last segment and preserve relative paths.
+     * 
      */
     private static void createSnapshotZipFromDir(Path dir, Path destZip) throws java.io.IOException {
         String baseName = dir.getFileName().toString();
