@@ -46,7 +46,9 @@ followed by the following options
  - `--install-target <dir>` : Custom target for .repo files (default: /QOpenSys/etc/yum/repos.d).
  - `-p, --port <port>` : Port for HTTP server (default: 9000).
  - `--host <host>` : Host/IP for .repo file generation (default: localhost).
+ - `-cr, --createSnap` : Path to directory that contains the RPMs you want added to your custom repo
+ - `-rn, --repoame`: To be used in conjunction with `-cr`, allows the created repo to be given a custom name, else it will default to `customrepo`
 > [!NOTE]
-> - You must specify exactly one of `-c <file>` OR `--adminGui` OR `--userGui` OR `--serve-existing` options
+> - You must specify exactly one of `-c <file>` OR `--adminGui` OR `--userGui` OR `--serve-existing` OR `--createSnap` options
 > - `--adminGui` and `--userGui` are standalone options and should be used on their own, not with other options
 
