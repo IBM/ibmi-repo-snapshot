@@ -1,8 +1,11 @@
 package com.github.theprez.repotool;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import java.util.Map;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
@@ -171,7 +174,17 @@ public class RpmRepoTool {
             }
             Path extractedDir = null;
 
+
+
             Options opts = new Options();
+
+            Option createSnap = new Option("cr", "createSnap", true, "create a snapshot from RPMs");
+            createSnap.setRequired(false);
+            opts.addOption(createSnap);
+
+            Option repoNameOpt = new Option("rn", "reponame", true, "Name of the created repo (used with -cr). Default: customrepo");
+            repoNameOpt.setRequired(false);
+            opts.addOption(repoNameOpt);
 
             Option config = new Option("c", "config", true, "config file path");
             config.setRequired(false);
@@ -235,12 +248,14 @@ public class RpmRepoTool {
             Boolean userGuiView = cmd.hasOption("userGui");
             Boolean useServeExisting = cmd.hasOption("serve-existing");
             Boolean serveWithJetty = cmd.hasOption("serve");
+            Boolean crSnap = cmd.hasOption("createSnap") || cmd.hasOption("cr");
 
             int modeCount = 0;
             if (hasConfig) modeCount++;
             if (adminGuiView) modeCount++;
             if (userGuiView) modeCount++;
             if (useServeExisting) modeCount++;
+            if (crSnap) modeCount++;
             if (modeCount != 1) {
                 System.err.println("You must specify exactly one of -c <file> OR --adminGui OR --userGui OR --serve-existing");
                 formatter.printHelp("RepoSnapshotTool", opts);
@@ -382,6 +397,74 @@ public class RpmRepoTool {
                 }
             }
 
+            if (crSnap) {
+                String newDir = cmd.getOptionValue("createSnap");
+                String repoName = cmd.getOptionValue("reponame", cmd.getOptionValue("rn", "customrepo"));
+                Path dir = java.nio.file.Paths.get(newDir).toAbsolutePath().normalize();
+                if (!Files.exists(dir) || !Files.isDirectory(dir)) {
+                    System.err.println("Error: directory does not exist: " + dir);
+                    System.exit(1);
+                }
+
+                // Prepare temp workspace: <tmp>/<repoName>/{rpm,repodata}
+                Path tmp = Files.createTempDirectory("repo-snap-");
+                Path repoRoot = tmp.resolve(repoName);
+                Path rpmDir = repoRoot.resolve("rpm");
+                Files.createDirectories(rpmDir);
+
+                // Copy RPM files from source dir into rpmDir (non-recursive: only top-level RPMs)
+                try (java.util.stream.Stream<Path> s = Files.list(dir)) {
+                    s.filter(Files::isRegularFile)
+                     .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"))
+                     .forEach(p -> {
+                         try {
+                             Files.copy(p, rpmDir.resolve(p.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                         } catch (Exception e) {
+                             throw new RuntimeException(e);
+                         }
+                     });
+                }
+
+                // If no RPMs found at top-level, try recursive copy
+                boolean hasRpms = Files.list(rpmDir).anyMatch(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"));
+                if (!hasRpms) {
+                    try (java.util.stream.Stream<Path> s = Files.walk(dir)) {
+                        s.filter(Files::isRegularFile)
+                         .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"))
+                         .forEach(p -> {
+                             try {
+                                 Files.copy(p, rpmDir.resolve(p.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                             } catch (Exception e) {
+                                 throw new RuntimeException(e);
+                             }
+                         });
+                    }
+                }
+
+                // Run createrepo on repoRoot so repodata references the `rpm/` subfolder
+                boolean created = runCreateRepoOnDir(repoRoot);
+                if (!created) {
+                    System.err.println("Warning: createrepo did not succeed. The repo may be invalid.");
+                }
+
+                // Create snapshots directory and zip repoRoot as snapshot containing repoName/{repodata,rpm}
+                Path snapshotsDir = java.nio.file.Paths.get("snapshots");
+                if (!Files.exists(snapshotsDir)) Files.createDirectories(snapshotsDir);
+                String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                String zipName = "snapshot_" + timestamp + ".zip";
+                Path zipPath = snapshotsDir.resolve(zipName);
+                System.out.println("Creating snapshot zip: " + zipPath);
+                createSnapshotZipFromDir(repoRoot, zipPath);
+                System.out.println("Snapshot created: " + zipPath.toAbsolutePath());
+
+                // Cleanup temp
+                try {
+                    deleteDirectoryRecursively(tmp);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+
             System.out.println("Complete!");
         } catch (Exception e) {
             e.printStackTrace();
@@ -395,6 +478,64 @@ public class RpmRepoTool {
             walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
                 try { Files.delete(p); } catch (java.io.IOException ignored) {}
             });
+        }
+    }
+
+    /**
+     * Try to run createrepo or createrepo_c on the provided directory.
+     */
+    private static boolean runCreateRepoOnDir(Path dir) {
+        String[] cmds = new String[] { "createrepo_c", "createrepo" };
+        for (String cmd : cmds) {
+            try {
+                // Run createrepo from inside the repo root using a relative path (".")
+                // This prevents createrepo from embedding the absolute or duplicated
+                // "repodata/" prefix into the generated <location href="..."> entries.
+                ProcessBuilder pb = new ProcessBuilder(cmd, ".");
+                pb.directory(dir.toFile());
+                pb.redirectErrorStream(true);
+                Process p = pb.start();
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
+                    String line;
+                    while ((line = r.readLine()) != null) System.out.println("[" + cmd + "] " + line);
+                }
+                int rc = p.waitFor();
+                System.out.println(cmd + " exit code: " + rc + " for " + dir);
+                if (rc == 0) return true;
+            } catch (Exception e) {
+                // try next
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Create a zip snapshot containing the given directory. The zip will contain a top-level
+     * folder named after the directory's last segment and preserve relative paths.
+     */
+    private static void createSnapshotZipFromDir(Path dir, Path destZip) throws java.io.IOException {
+        String baseName = dir.getFileName().toString();
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(destZip.toFile()))) {
+            try (java.util.stream.Stream<Path> walk = Files.walk(dir)) {
+                walk.forEach(p -> {
+                    try {
+                        Path rel = dir.relativize(p);
+                        String entryName = baseName + "/" + rel.toString().replace('\\', '/');
+                        if (Files.isDirectory(p)) {
+                            if (rel.toString().isEmpty()) return; // skip root dir itself
+                            if (!entryName.endsWith("/")) entryName = entryName + "/";
+                            zos.putNextEntry(new ZipEntry(entryName));
+                            zos.closeEntry();
+                        } else {
+                            zos.putNextEntry(new ZipEntry(entryName));
+                            Files.copy(p, zos);
+                            zos.closeEntry();
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            }
         }
     }
 
