@@ -483,7 +483,6 @@ public class RpmRepoTool {
 
     /**
      * Try to run createrepo or createrepo_c on the provided directory.
-     * Returns true if any invocation returned exit code 0.
      */
     private static boolean runCreateRepoOnDir(Path dir) {
         String[] cmds = new String[] { "createrepo_c", "createrepo" };
