@@ -406,19 +406,19 @@ public class RpmRepoTool {
                     System.exit(1);
                 }
 
-                // Prepare temp workspace: <tmp>/<repoName>/{src,repodata}
+                // Prepare temp workspace: <tmp>/<repoName>/{rpm,repodata}
                 Path tmp = Files.createTempDirectory("repo-snap-");
                 Path repoRoot = tmp.resolve(repoName);
-                Path srcDir = repoRoot.resolve("src");
-                Files.createDirectories(srcDir);
+                Path rpmDir = repoRoot.resolve("rpm");
+                Files.createDirectories(rpmDir);
 
-                // Copy RPM files from source dir into srcDir (non-recursive: only top-level RPMs)
+                // Copy RPM files from source dir into rpmDir (non-recursive: only top-level RPMs)
                 try (java.util.stream.Stream<Path> s = Files.list(dir)) {
                     s.filter(Files::isRegularFile)
                      .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"))
                      .forEach(p -> {
                          try {
-                             Files.copy(p, srcDir.resolve(p.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                             Files.copy(p, rpmDir.resolve(p.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                          } catch (Exception e) {
                              throw new RuntimeException(e);
                          }
@@ -426,14 +426,14 @@ public class RpmRepoTool {
                 }
 
                 // If no RPMs found at top-level, try recursive copy
-                boolean hasRpms = Files.list(srcDir).anyMatch(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"));
+                boolean hasRpms = Files.list(rpmDir).anyMatch(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"));
                 if (!hasRpms) {
                     try (java.util.stream.Stream<Path> s = Files.walk(dir)) {
                         s.filter(Files::isRegularFile)
                          .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".rpm"))
                          .forEach(p -> {
                              try {
-                                 Files.copy(p, srcDir.resolve(p.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                                 Files.copy(p, rpmDir.resolve(p.getFileName()), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                              } catch (Exception e) {
                                  throw new RuntimeException(e);
                              }
@@ -441,13 +441,13 @@ public class RpmRepoTool {
                     }
                 }
 
-                // Run createrepo on repoRoot so repodata references the `src/` subfolder
+                // Run createrepo on repoRoot so repodata references the `rpm/` subfolder
                 boolean created = runCreateRepoOnDir(repoRoot);
                 if (!created) {
                     System.err.println("Warning: createrepo did not succeed. The repo may be invalid.");
                 }
 
-                // Create snapshots directory and zip repoRoot as snapshot containing repoName/{repodata,src}
+                // Create snapshots directory and zip repoRoot as snapshot containing repoName/{repodata,rpm}
                 Path snapshotsDir = java.nio.file.Paths.get("snapshots");
                 if (!Files.exists(snapshotsDir)) Files.createDirectories(snapshotsDir);
                 String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -489,7 +489,10 @@ public class RpmRepoTool {
         String[] cmds = new String[] { "createrepo_c", "createrepo" };
         for (String cmd : cmds) {
             try {
-                ProcessBuilder pb = new ProcessBuilder(cmd, dir.toString());
+                // Run createrepo from inside the repo root using a relative path (".")
+                // This prevents createrepo from embedding the absolute or duplicated
+                // "repodata/" prefix into the generated <location href="..."> entries.
+                ProcessBuilder pb = new ProcessBuilder(cmd, ".");
                 pb.directory(dir.toFile());
                 pb.redirectErrorStream(true);
                 Process p = pb.start();
