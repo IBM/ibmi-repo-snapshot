@@ -1,4 +1,4 @@
-package com.github.theprez.repotool;
+package com.github.snaptool.repotool;
 
 import java.io.BufferedReader;
 import java.io.IOException;

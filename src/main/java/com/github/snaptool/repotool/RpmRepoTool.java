@@ -1,4 +1,4 @@
-package com.github.theprez.repotool;
+package com.github.snaptool.repotool;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,12 +18,12 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-import com.github.theprez.config.RpmConfigParser;
-import com.github.theprez.config.data.Repo;
-import com.github.theprez.config.data.RepoParams;
-import com.github.theprez.repotool.RepoDownloader.FStatus;
-import com.github.theprez.repotool.RepoDownloader.RepoFile;
-import com.github.theprez.repotool.RepoDownloader.StatusListener;
+import com.github.snaptool.config.RpmConfigParser;
+import com.github.snaptool.config.data.Repo;
+import com.github.snaptool.config.data.RepoParams;
+import com.github.snaptool.repotool.RepoDownloader.FStatus;
+import com.github.snaptool.repotool.RepoDownloader.RepoFile;
+import com.github.snaptool.repotool.RepoDownloader.StatusListener;
 
 public class RpmRepoTool {
 
@@ -340,7 +340,7 @@ public class RpmRepoTool {
                                 throw new Exception("Zip file does not exist: " + zipPath);
                             }
                             Files.createDirectories(extractedDir);
-                            com.github.theprez.repotool.RepoDownloader.unzip(zipPath, parentDir);
+                            com.github.snaptool.repotool.RepoDownloader.unzip(zipPath, parentDir);
                             System.out.println("Unzipped " + zipPath + " to: " + extractedDir);
                         } catch (Exception ex) {
                             System.err.println("Failed to unzip repo zip: " + ex.getMessage());

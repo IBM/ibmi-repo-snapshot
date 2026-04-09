@@ -1,7 +1,7 @@
-package com.github.theprez.config;
+package com.github.snaptool.config;
 
 
-import com.github.theprez.config.data.Repo;
+import com.github.snaptool.config.data.Repo;
 import org.junit.Test;
 import java.util.Map;
 import static org.junit.Assert.*;

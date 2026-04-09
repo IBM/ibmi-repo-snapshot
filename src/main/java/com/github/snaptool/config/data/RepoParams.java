@@ -1,4 +1,4 @@
-package com.github.theprez.config.data;
+package com.github.snaptool.config.data;
 
 public class RepoParams {
 	private String url;

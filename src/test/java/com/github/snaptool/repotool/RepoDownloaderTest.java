@@ -1,7 +1,7 @@
 
-package com.github.theprez.repotool;
+package com.github.snaptool.repotool;
 
-import com.github.theprez.config.data.RepoParams;
+import com.github.snaptool.config.data.RepoParams;
 import org.junit.Test;
 import java.net.MalformedURLException;
 import static org.junit.Assert.*;

@@ -1,4 +1,4 @@
-package com.github.theprez.repotool;
+package com.github.snaptool.repotool;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -34,7 +34,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import com.github.theprez.config.data.RepoParams;
+import com.github.snaptool.config.data.RepoParams;
 
 public class RepoDownloader {
 

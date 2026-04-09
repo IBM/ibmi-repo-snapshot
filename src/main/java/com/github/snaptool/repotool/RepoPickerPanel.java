@@ -1,4 +1,4 @@
-package com.github.theprez.repotool;
+package com.github.snaptool.repotool;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;

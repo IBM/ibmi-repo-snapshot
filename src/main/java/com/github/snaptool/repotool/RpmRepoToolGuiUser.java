@@ -1,4 +1,4 @@
-package com.github.theprez.repotool;
+package com.github.snaptool.repotool;
 
 import javax.swing.*;
 import javax.swing.JLabel;
@@ -147,21 +147,21 @@ public class RpmRepoToolGuiUser extends JFrame {
                     Path extractDir = snapshotsDir.toPath().resolve(selectedZip.replaceFirst("\\.zip$", ""));
                     if (!extractDir.toFile().exists()) {
                         extractDir.toFile().mkdirs();
-                        com.github.theprez.repotool.RepoDownloader.unzip(zipFile.toPath(), snapshotsDir.toPath());
+                        com.github.snaptool.repotool.RepoDownloader.unzip(zipFile.toPath(), snapshotsDir.toPath());
                     }
                     String hostForRepo = "localhost";
                     int portForRepo = parsePortOrDefault(txtPort.getText().trim(), 9000);
-                    com.github.theprez.repotool.RepoUtils.generateRepoFiles(extractDir, hostForRepo, portForRepo);
+                    com.github.snaptool.repotool.RepoUtils.generateRepoFiles(extractDir, hostForRepo, portForRepo);
 
                     if (chkInstallRepos.isSelected()) {
-                        if (!com.github.theprez.repotool.RepoUtils.isIbmI()) {
+                        if (!com.github.snaptool.repotool.RepoUtils.isIbmI()) {
                             SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
                                 "Installing .repo files is only supported on IBM i. Skipping installation.",
                                 "Install Skipped", JOptionPane.INFORMATION_MESSAGE));
                         } else {
                             String targetFinal = "/QOpenSys/etc/yum/repos.d";
                             boolean systemTarget = "/QOpenSys/etc/yum/repos.d".equals(targetFinal) || targetFinal.startsWith("/etc/") || targetFinal.startsWith("/QOpenSys/etc/");
-                            if (systemTarget && !com.github.theprez.repotool.RepoUtils.isRunningAsRoot()) {
+                            if (systemTarget && !com.github.snaptool.repotool.RepoUtils.isRunningAsRoot()) {
                                 int r = JOptionPane.showConfirmDialog(RpmRepoToolGuiUser.this,
                                     "You are not running as root. Installing to " + targetFinal + " will likely fail. Continue?",
                                     "Install without root?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
@@ -170,7 +170,7 @@ public class RpmRepoToolGuiUser extends JFrame {
                                         "Install cancelled.", "Install", JOptionPane.INFORMATION_MESSAGE));
                                 } else {
                                     try {
-                                        int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
+                                        int installed = com.github.snaptool.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
                                         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
                                             "Installed " + installed + " .repo files to: " + targetFinal,
                                             "Install", JOptionPane.INFORMATION_MESSAGE));
@@ -182,7 +182,7 @@ public class RpmRepoToolGuiUser extends JFrame {
                                 }
                             } else {
                                 try {
-                                    int installed = com.github.theprez.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
+                                    int installed = com.github.snaptool.repotool.RepoUtils.installRepoFiles(extractDir, java.nio.file.Paths.get(targetFinal));
                                     SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(RpmRepoToolGuiUser.this,
                                         "Installed " + installed + " .repo files to: " + targetFinal,
                                         "Install", JOptionPane.INFORMATION_MESSAGE));

@@ -1,4 +1,4 @@
-package com.github.theprez.config;
+package com.github.snaptool.config;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,7 +9,7 @@ import java.util.Map;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
-import com.github.theprez.config.data.Repo;
+import com.github.snaptool.config.data.Repo;
 
 public class RpmConfigParser {
 
