@@ -1,7 +1,7 @@
 # ibmi-repo-snapshot
 IBM i RPM repo snapshot tool
 
-A Java-based tool for taking snapshots of RPM-based repositories, generating .repo files, and serving or installing them for IBM i. This allows package installers such (primarily yum) to be configured to install open source software from the served RPM-repositories. Supports both CLI and GUI (admin/user) modes.
+A Java-based tool for taking snapshots of RPM-based repositories, generating .repo files, and serving or installing them for IBM i. This allows package installers (primarily yum) to be configured to install open source software from the served RPM-repositories. Supports both CLI and GUI (admin/user) modes.
 
 ## Features
  - Download and snapshot RPM repositories using a YAML config file.
